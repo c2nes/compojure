@@ -132,11 +132,12 @@
        (handler request respond raise)))))
 
 (defn- wrap-route-info [handler route-info]
-  (fn
-    ([request]
-     (handler (assoc request :compojure/route route-info)))
-    ([request respond raise]
-     (handler (assoc request :compojure/route route-info) respond raise))))
+  (letfn [(add-info [m] (assoc m :compojure/route route-info))]
+    (fn
+      ([request]
+       (add-info (handler (add-info request))))
+      ([request respond raise]
+       (handler (add-info request) (comp respond add-info) raise)))))
 
 (defn- wrap-route-matches [handler method path]
   (fn

@@ -52,14 +52,14 @@
        req)))
 
   (testing "nil coercions"
-    (is (not (nil? ((GET "/foo/:x" [x] (str x))
-                    (mock/request :get "/foo/bar")))))
-    (is (not (nil? ((GET "/foo/:x" [x :<< coercions/as-int] (str x))
-                    (mock/request :get "/foo/100")))))
-    (is (not (nil? ((GET "/foo/:x" [x :<< #(Boolean/valueOf %)] (str x))
-                    (mock/request :get "/foo/false")))))
-    (is (nil? ((GET "/foo/:x" [x :<< coercions/as-int] (str x))
-               (mock/request :get "/foo/bar")))))
+    (is (not (nil? (:body ((GET "/foo/:x" [x] (str x))
+                           (mock/request :get "/foo/bar"))))))
+    (is (not (nil? (:body ((GET "/foo/:x" [x :<< coercions/as-int] (str x))
+                           (mock/request :get "/foo/100"))))))
+    (is (not (nil? (:body ((GET "/foo/:x" [x :<< #(Boolean/valueOf %)] (str x))
+                           (mock/request :get "/foo/false"))))))
+    (is (nil? (:body ((GET "/foo/:x" [x :<< coercions/as-int] (str x))
+                      (mock/request :get "/foo/bar"))))))
 
   (testing "nil coercions in contexts"
     (is (not (nil? ((context "/foo/:x" [x] (GET "/" [] (str x)))
@@ -90,27 +90,27 @@
                   (assoc :form-params {"_method" "PUT"}))
           resp {:status 200, :headers {}, :body "bar"}
           route (PUT "/foo" [] resp)]
-      (is (= (route req) resp))))
+      (is (= (dissoc (route req) :compojure/route) resp))))
 
   (testing "_method parameter case-insenstive"
     (let [req (-> (mock/request :post "/foo")
                   (assoc :form-params {"_method" "delete"}))
           resp {:status 200, :headers {}, :body "bar"}
           route (DELETE "/foo" [] resp)]
-      (is (= (route req) resp))))
+      (is (= (dissoc (route req) :compojure/route) resp))))
 
   (testing "_method parameter in multipart forms"
     (let [req (-> (mock/request :post "/foo")
                   (assoc :multipart-params {"_method" "PUT"}))
           resp {:status 200, :headers {}, :body "bar"}
           route (PUT "/foo" [] resp)]
-      (is (= (route req) resp))))
+      (is (= (dissoc (route req) :compojure/route) resp))))
 
   (testing "HEAD requests"
     (let [resp  {:status 200, :headers {"X-Foo" "foo"}, :body "bar"}
           route (GET "/foo" []  resp)]
       (is (= (route (mock/request :head "/foo"))
-             (assoc resp :body nil)))))
+             (assoc resp :body nil :compojure/route [:get "/foo"])))))
 
   (testing "custom regular expressions"
     (let [route (GET ["/foo/:id" :id #"\d+"] [id] id)]
@@ -319,10 +319,22 @@
       (is (= (request :compojure/route)
              [:get "/foo/:id"]))))
 
+  (let [route (GET "/foo/:id" req "foo")
+        response (route (mock/request :get "/foo/1"))]
+    (testing "response has matched route information"
+      (is (= (response :compojure/route)
+             [:get "/foo/:id"]))))
+
   (let [route (ANY "/foo/:id" req req)
         request (route (mock/request :post "/foo/1" {}))]
     (testing "ANY request has matched route information"
       (is (= (request :compojure/route)
+             [:any "/foo/:id"]))))
+
+  (let [route (ANY "/foo/:id" req "foo")
+        response (route (mock/request :post "/foo/1" {}))]
+    (testing "ANY response has matched route information"
+      (is (= (response :compojure/route)
              [:any "/foo/:id"])))))
 
 (deftest route-async-test
@@ -337,7 +349,8 @@
           (is (= @response
                  {:status  200
                   :headers {"Content-Type" "text/html; charset=utf-8"}
-                  :body    "hello world"}))))
+                  :body    "hello world"
+                  :compojure/route [:get "/hello/:name"]}))))
 
       (testing "not-matching request"
         (let [request   (mock/request :get "/goodbye/world")
@@ -462,4 +475,5 @@
       (is (= @response
              {:status  200
               :headers {"Content-Type" "text/html; charset=utf-8"}
-              :body    "foobar"})))))
+              :body    "foobar"
+              :compojure/route [:get "/"]})))))

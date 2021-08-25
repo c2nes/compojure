@@ -15,15 +15,18 @@
     (is (= (handler (mock/request :get "/foo"))
            {:status 200
             :headers {"Content-Type" "text/html; charset=utf-8"}
-            :body "foo"}))
+            :body "foo"
+            :compojure/route [:get "/foo"]}))
     (is (= (handler (mock/request :get "/foo/"))
            {:status 301
             :headers {"Location" "/foo"}
-            :body ""}))
+            :body ""
+            :compojure/route [:get "/foo"]}))
     (is (= (handler (mock/request :get "/bar/"))
            {:status 301
             :headers {"Location" "/bar"}
-            :body ""}))
+            :body ""
+            :compojure/route [:get "/bar"]}))
     (is (= (handler (mock/request :get "/baz/"))
            {:status 404
             :headers {"Content-Type" "text/html; charset=utf-8"}
@@ -39,7 +42,8 @@
         (is (= @response
                {:status 200
                 :headers {"Content-Type" "text/html; charset=utf-8"}
-                :body "foo"}))))
+                :body "foo"
+                :compojure/route [:get "/foo"]}))))
 
     (testing "redirect"
       (let [response  (promise)
@@ -49,4 +53,5 @@
         (is (= @response
                {:status 301
                 :headers {"Location" "/foo"}
-                :body ""}))))))
+                :body ""
+                :compojure/route [:get "/foo"]}))))))
